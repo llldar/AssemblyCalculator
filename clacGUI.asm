@@ -3,6 +3,11 @@
 option casemap:none
 WinMain proto :DWORD,:DWORD,:DWORD,:DWORD
 AppendText proto StringAddr:DWORD,Text:DWORD
+CalProc proto ExpAddr:DWORD
+getEndChar proto StringAddr:DWORD 
+setEndChar proto StringAddr:DWORD,Text:DWORD
+isOperator proto char:DWORD
+
 
 include \masm32\include\windows.inc
 include \masm32\include\user32.inc
@@ -160,12 +165,62 @@ AppendText proc StringAddr:DWORD,Text:DWORD
 	mov [eax],bl
 	add eax,1
 	mov [eax],cl
-	pop eax
-	pop ebx
-	pop ecx
 	pop edx
+	pop ecx
+	pop ebx
+	pop eax
 	ret
 AppendText endp
+
+;获取末尾字符
+getEndChar proc StringAddr:DWORD
+	push ecx
+	push edx
+	mov eax,StringAddr
+	mov dl,[eax]
+	.WHILE dl !=0
+		add eax,1
+		mov dl,[eax]
+	.ENDW
+	mov ecx,eax
+	sub ecx,1
+	mov dl,[ecx]
+	xor eax,eax
+	mov al,dl
+	pop edx
+	pop ecx
+	ret 	
+	;返回值存储在eax中
+getEndChar endp
+
+;设置末尾字符
+setEndChar proc StringAddr:DWORD,Text:DWORD
+	push ebx
+	push edx
+	mov eax,StringAddr
+	mov ebx,Text
+	mov dl,[eax]
+	.WHILE dl != 0
+		add eax,1
+		mov dl,[eax]
+	.ENDW
+	sub eax,1
+	mov [eax],bl
+	pop edx
+	pop ebx
+	ret
+setEndChar endp
+
+;检测字符是否运算符
+isOperator proc char:DWORD
+	.IF char == '+' || char == '-' || char == '*' || char == '/'
+		mov eax,1
+	.ELSE
+		mov eax,0
+	.ENDIF
+	ret
+isOperator endp
+
 
 WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 	.IF uMsg==WM_DESTROY
@@ -179,7 +234,6 @@ WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
                         30,30,165,30,hWnd,EditID,hInstance,NULL
 		mov  hwndEdit,eax
 		invoke SetFocus, hwndEdit
-
 		;添加按钮
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText1,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
@@ -255,87 +309,82 @@ WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 			.ELSEIF  ax==IDM_GETTEXT
 				invoke GetWindowText,hwndEdit,ADDR buffer,512
 				invoke MessageBox,NULL,ADDR buffer,ADDR AppName,MB_OK
-			;.ELSEIF  ax==IDM_UPDATETEXT
-				;invoke 
+			.ELSEIF  ax==IDM_UPDATETEXT
+				invoke GetWindowText,hwndEdit,ADDR buffer,512
+				invoke CalProc,ADDR buffer
+				;TODO:Change this to actual calculate operations
+				invoke SetWindowText,hwndEdit,ADDR buffer
 			.ELSE
 				invoke DestroyWindow,hWnd
 			.ENDIF
-		.ELSEIF lParam>0 && lParam<=9
+		;数字处理
+		.ELSEIF lParam>='0' && lParam<='9'
 			;输入处理	
 				invoke GetWindowText,hwndEdit,ADDR buffer,512
-				;给lParam加'0'使其转换为字符
-				push eax;
-				mov eax,lParam;
-				add eax,48;
-				mov lParam,eax;
-				pop eax;
 				invoke AppendText,ADDR buffer,lParam
 				invoke SetWindowText,hwndEdit,ADDR buffer
-		.ELSEIF lParam == '+' || lParam == '-' || lParam == '*' || lParam == '/' || lParam == 10
-			.IF lParam == 10
-				;把0转换为字符
-				push eax;
-				mov eax,lParam;
-				add eax,38;
-				mov lParam,eax;
-				pop eax;
-				invoke AppendText,ADDR buffer,lParam
-				invoke SetWindowText,hwndEdit,ADDR buffer
-			.ELSE
-				invoke AppendText,ADDR buffer,lParam
-				invoke SetWindowText,hwndEdit,ADDR buffer
+		;符号处理
+		.ELSEIF lParam == '+' || lParam == '-' || lParam == '*' || lParam == '/'
+			;如果前面有符号:
+			invoke GetWindowText,hwndEdit,ADDR buffer,512
+			invoke getEndChar,ADDR buffer
+			invoke isOperator,eax
+			.IF eax == 1
+				invoke setEndChar,ADDR buffer,0
 			.ENDIF
+			invoke AppendText,ADDR buffer,lParam
+			invoke SetWindowText,hwndEdit,ADDR buffer
 		.ELSE
 			;按钮函数回调区域
 			.IF ax==1
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,1
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'1'
 				.ENDIF
 			.ELSEIF ax==2
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,2
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'2'
 				.ENDIF
 			.ELSEIF ax==3
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,3
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'3'
 				.ENDIF
 			.ELSEIF ax==4
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,4
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'4'
 				.ENDIF
 			.ELSEIF ax==5
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,5
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'5'
 				.ENDIF
 			.ELSEIF ax==6
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,6
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'6'
 				.ENDIF
 			.ELSEIF ax==7
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,7
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'7'
 				.ENDIF
 			.ELSEIF ax==8
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,8
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'8'
 				.ENDIF
 			.ELSEIF ax==9
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,9
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'9'
 				.ENDIF
 			.ELSEIF ax==0
 				shr eax,16
 				.IF ax==BN_CLICKED
-					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,10
+					invoke SendMessage,hWnd,WM_COMMAND,IDM_APEENDTEXT,'0'
 				.ENDIF
 			.ELSEIF ax==ButtonAddID
 				shr eax,16
@@ -376,6 +425,13 @@ WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 	xor    eax,eax
 	ret
 WndProc endp
+
+;计算过程
+CalProc proc ExpAddr:DWORD
+	
+	;返回值存储在eax中
+	ret 
+CalProc endp
 
 
 end start
