@@ -1,13 +1,14 @@
 .386
 .model flat,stdcall
 option casemap:none
-WinMain proto :DWORD,:DWORD,:DWORD,:DWORD
-AppendText proto StringAddr:DWORD,Text:DWORD
-CalProc proto ExpAddr:DWORD
-getEndChar proto StringAddr:DWORD 
-setEndChar proto StringAddr:DWORD,Text:DWORD
-isOperator proto char:DWORD
-
+WinMain proto :DWORD,:DWORD,:DWORD,:DWORD		;主窗口过程
+AppendText proto StringAddr:DWORD,Text:DWORD	;用于在字符串末尾添加字符
+CalProc proto ExpAddr:DWORD						;计算器的过程
+getEndChar proto StringAddr:DWORD 				;获取末尾字符，返回的 值 存在eax中
+setEndChar proto StringAddr:DWORD,Text:DWORD	;设置末尾字符
+isOperator proto chr:DWORD						;是否运算符，传入值
+atoi proto ExpAddr:DWORD						;用于把文字转换为数字
+scrollToOpt proto ExpAddr:DWORD					;找到下一个符号
 
 include \masm32\include\windows.inc
 include \masm32\include\user32.inc
@@ -79,7 +80,12 @@ ButtonDiv HWND ?
 ButtonEqu HWND ?
 ButtonClr HWND ?
 hwndEdit HWND ?
+;输入表达式缓冲区
 buffer db 512 dup(?)
+;数字栈
+oprs db 512 dup(?)
+;符号栈
+opts db 512 dup(?)
 
 .const
 
@@ -211,9 +217,9 @@ setEndChar proc StringAddr:DWORD,Text:DWORD
 	ret
 setEndChar endp
 
-;检测字符是否运算符
-isOperator proc char:DWORD
-	.IF char == '+' || char == '-' || char == '*' || char == '/'
+;检测字符是否运算符 注意要传字符值，而非地址
+isOperator proc chr:DWORD
+	.IF chr == '+' || chr == '-' || chr == '*' || chr == '/'
 		mov eax,1
 	.ELSE
 		mov eax,0
@@ -221,6 +227,65 @@ isOperator proc char:DWORD
 	ret
 isOperator endp
 
+atoi proc ExpAddr:DWORD
+	push ebx
+	push ecx
+	push edx
+	xor ecx,ecx
+	xor edx,edx
+	mov ebx,ExpAddr
+	invoke scrollToOpt,ebx
+	mov ecx,eax
+	xor eax,eax
+	.WHILE ebx < ecx
+		mov dl,[ebx]
+		sub dl,'0'
+		;实现eax乘以10
+		push ebx
+		mov ebx,eax
+		sal eax,3
+		sal ebx,1
+		add eax,ebx
+		pop ebx
+
+		add eax,edx
+		add ebx,1
+	.ENDW
+	pop edx
+	pop ecx
+	pop ebx
+	ret
+	;返回值存储在eax中
+atoi endp
+
+scrollToOpt proc ExpAddr:DWORD
+	;如果有符号则移动至符号处，移动到结尾为止
+
+	push ebx
+	push ecx
+	xor eax,eax
+	xor ecx,ecx
+	mov ebx,ExpAddr
+	mov cl,[ebx]
+	;一上来就是结尾
+	.IF cl == 0
+		mov eax,1
+	.ENDIF
+	;找到下一个符号
+	.WHILE eax != 1
+		add ebx,1
+		mov cl,[ebx]
+		invoke isOperator,ecx
+		.IF cl == 0
+			mov eax,1
+		.ENDIF
+	.ENDW
+	mov eax,ebx
+	pop ecx
+	pop ebx
+	ret
+	;返回值存储在eax中	
+scrollToOpt endp
 
 WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 	.IF uMsg==WM_DESTROY
@@ -428,9 +493,42 @@ WndProc endp
 
 ;计算过程
 CalProc proc ExpAddr:DWORD
+	push ebx;存数字栈顶
+	push ecx;存符号栈顶
+	push edx;存表达式的进度指针
+	mov ebx,offset oprs
+	mov ecx,offset opts
+	mov edx,ExpAddr 
+
+
+	.WHILE edx != 0
+		invoke atoi,edx
+		;推入数据栈
+		mov [ebx],eax
+		add ebx,4
+
+		invoke scrollToOpt,edx
+		mov edx,eax
+		xor eax,eax
+		mov al,[edx]
+		invoke isOperator,eax
+		.IF eax == 1
+		;推入符号栈
+			mov eax,[edx]
+			mov [ecx],eax
+			add ecx,4
+			add edx,1
+		.ELSE
+			xor edx,edx
+		.ENDIF
+
+	.ENDW
 	
+	pop edx
+	pop ecx
+	pop ebx
 	;返回值存储在eax中
-	ret 
+	ret
 CalProc endp
 
 
