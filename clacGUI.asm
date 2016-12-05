@@ -275,40 +275,89 @@ itoa proc num:DWORD,StringAddr:DWORD
 	xor edx,edx
 	xor ecx,ecx
 	mov eax,num
-	;计算位数
-	mov ebx,10
-	;本身就是0
+
+	;检测正负
+	sar eax,31
 	.IF eax == 0
-		mov ecx,1
-	.ENDIF
-	.WHILE eax != 0
-		idiv ebx
-		add ecx,1
-		xor edx,edx
-	.ENDW
-	xor edx,edx
-
-	mov eax,num
-	mov ebx,StringAddr
-	;结果字符串后边补0
-	add ebx,ecx
-	mov edx,0
-	mov [ebx],dl
-	sub ebx,1
-
-	.WHILE ecx > 0
-		push ebx
+		;正数或0的情况
+		;计算位数
 		mov ebx,10
+		;本身就是0
+		.IF eax == 0
+			mov ecx,1
+		.ENDIF
+		.WHILE eax != 0
+			idiv ebx
+			add ecx,1
+			xor edx,edx
+		.ENDW
 		xor edx,edx
-		idiv ebx
-		add edx,'0'
-		pop ebx
-		;写入字符串
+
+		mov eax,num
+		mov ebx,StringAddr
+		;结果字符串后边补0
+		add ebx,ecx
+		mov edx,0
+		mov [ebx],dl
+		sub ebx,1
+
+		.WHILE ecx > 0
+			push ebx
+			mov ebx,10
+			xor edx,edx
+			idiv ebx
+			add edx,'0'
+			pop ebx
+			;写入字符串
+			mov [ebx],dl
+			sub ebx,1
+			sub ecx,1
+		.ENDW
+	.ELSE
+		;负数的情况
+		mov ebx,eax;存储全1的mask
+		mov eax,num
+		sub eax,1
+		xor eax,ebx;反向
+		push eax
+		mov ebx,10
+		;下面类似正数部分
+		.WHILE eax != 0
+		    xor edx,edx
+			idiv ebx
+			add ecx,1
+		.ENDW
+		xor edx,edx
+		add ecx,1;多一个地方存负号
+
+		pop eax
+		mov ebx,StringAddr
+		;结果字符串后边补0
+		add ebx,ecx
+		mov edx,0
+		mov [ebx],dl
+		sub ebx,1
+
+		.WHILE ecx > 1
+			push ebx
+			mov ebx,10
+			xor edx,edx
+			idiv ebx
+			add edx,'0'
+			pop ebx
+			;写入字符串
+			mov [ebx],dl
+			sub ebx,1
+			sub ecx,1
+		.ENDW
+
+		;最前面加一个负号
+		mov dl,'-'
 		mov [ebx],dl
 		sub ebx,1
 		sub ecx,1
-	.ENDW
 
+	.ENDIF
 	pop edx
 	pop ecx
 	pop ebx
