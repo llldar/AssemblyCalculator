@@ -244,8 +244,27 @@ atoi proc ExpAddr:DWORD
 	xor ecx,ecx
 	xor edx,edx
 	mov ebx,ExpAddr
+
 	invoke scrollToOpt,ebx
 	mov ecx,eax
+	xor eax,eax
+
+	;负号检测，如果在表达式首或者前面也是符号则为负号
+	mov al,[ebx]
+	invoke isOperator,al
+	.IF eax == 1
+		mov al,[ebx]
+		.IF al == '-'
+			push eax;表明该数字为负数
+		.ELSE
+			invoke promptError
+		.ENDIF
+		add ebx,1
+	.ELSE
+		mov al,'+'
+		push eax;表明该数字为正数
+	.ENDIF
+
 	xor eax,eax
 	.WHILE ebx < ecx
 		mov dl,[ebx]
@@ -261,6 +280,18 @@ atoi proc ExpAddr:DWORD
 		add eax,edx
 		add ebx,1
 	.ENDW
+
+	pop ebx;取回自己push进去的符号
+	.IF bl == '-'
+		mov ecx,0ffffffffh
+		xor eax,ecx
+		add eax,1
+	.ELSEIF bl == '+'
+		;do nothing
+	.ELSE
+		invoke promptError
+	.ENDIF
+
 	pop edx
 	pop ecx
 	pop ebx
@@ -281,15 +312,16 @@ itoa proc num:DWORD,StringAddr:DWORD
 	.IF eax == 0
 		;正数或0的情况
 		;计算位数
+		mov eax,num
 		mov ebx,10
 		;本身就是0
 		.IF eax == 0
 			mov ecx,1
 		.ENDIF
 		.WHILE eax != 0
+			cdq
 			idiv ebx
 			add ecx,1
-			xor edx,edx
 		.ENDW
 		xor edx,edx
 
@@ -304,7 +336,7 @@ itoa proc num:DWORD,StringAddr:DWORD
 		.WHILE ecx > 0
 			push ebx
 			mov ebx,10
-			xor edx,edx
+			cdq
 			idiv ebx
 			add edx,'0'
 			pop ebx
@@ -659,6 +691,7 @@ calculate proc op1:DWORD,op2:DWORD,opt:DWORD
 	.ELSEIF opt == '/'
 		mov eax,op1
 		mov ebx,op2
+		cdq
 		.IF ebx == 0
 			invoke promptError
 			mov ebx,1
@@ -696,6 +729,7 @@ CalProc proc ExpAddr:DWORD
 		invoke isOperator,eax
 		.IF eax == 1
 			mov al,[edx]
+
 			;与栈顶符号比较
 			invoke optcmp,ecx,eax
 			.IF eax == 0
@@ -728,11 +762,12 @@ CalProc proc ExpAddr:DWORD
 				.ENDW
 			.ENDIF
 				;将当前操作符压栈
+				xor eax,eax
 				mov al,[edx]
 				mov [ecx],eax
 				add ecx,4
 				add edx,1
-			
+	
 		.ELSE
 			;到达末尾
 			;结果加载到eax中
