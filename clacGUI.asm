@@ -3,12 +3,18 @@
 option casemap:none
 WinMain proto :DWORD,:DWORD,:DWORD,:DWORD		;主窗口过程
 AppendText proto StringAddr:DWORD,Text:DWORD	;用于在字符串末尾添加字符
-CalProc proto ExpAddr:DWORD						;计算器的过程
+CalProc proto ExpAddr:DWORD						;计算器的中缀表达式处理过程
 getEndChar proto StringAddr:DWORD 				;获取末尾字符，返回的 值 存在eax中
 setEndChar proto StringAddr:DWORD,Text:DWORD	;设置末尾字符
 isOperator proto chr:DWORD						;是否运算符，传入值
 atoi proto ExpAddr:DWORD						;用于把文字转换为数字
+itoa proto num:DWORD,StringAddr:DWORD			;用于把数字转换为文字
 scrollToOpt proto ExpAddr:DWORD					;找到下一个符号
+optcmp proto StkAddr:DWORD,opt:DWORD 			;用于符号间的优先级比较
+calculate proto op1:DWORD,op2:DWORD,opt:DWORD	;实际的运算处理
+promptError proto 								;错误提示
+MessageBoxA proto :DWORD,:DWORD,:DWORD,:DWORD
+MessageBox equ <MessageBoxA> 					;用于显示错误消息
 
 include \masm32\include\windows.inc
 include \masm32\include\user32.inc
@@ -22,6 +28,8 @@ ClassName db "SimpleWinClass",0
 AppName  db "计算器",0
 MenuName db "FirstMenu",0
 ButtonClassName db "button",0
+errorwinTittle db "错误提示",0
+errorMsg db "发生错误",0
 ButtonText1 db "1",0
 ButtonText2 db "2",0
 ButtonText3 db "3",0
@@ -86,6 +94,8 @@ buffer db 512 dup(?)
 oprs db 512 dup(?)
 ;符号栈
 opts db 512 dup(?)
+;结果存储区域
+result db 128 dup(?)
 
 .const
 
@@ -258,6 +268,53 @@ atoi proc ExpAddr:DWORD
 	;返回值存储在eax中
 atoi endp
 
+itoa proc num:DWORD,StringAddr:DWORD
+	push ebx
+	push ecx
+	push edx
+	xor edx,edx
+	xor ecx,ecx
+	mov eax,num
+	;计算位数
+	mov ebx,10
+	;本身就是0
+	.IF eax == 0
+		mov ecx,1
+	.ENDIF
+	.WHILE eax != 0
+		idiv ebx
+		add ecx,1
+		xor edx,edx
+	.ENDW
+	xor edx,edx
+
+	mov eax,num
+	mov ebx,StringAddr
+	;结果字符串后边补0
+	add ebx,ecx
+	mov edx,0
+	mov [ebx],dl
+	sub ebx,1
+
+	.WHILE ecx > 0
+		push ebx
+		mov ebx,10
+		xor edx,edx
+		idiv ebx
+		add edx,'0'
+		pop ebx
+		;写入字符串
+		mov [ebx],dl
+		sub ebx,1
+		sub ecx,1
+	.ENDW
+
+	pop edx
+	pop ecx
+	pop ebx
+	ret
+itoa endp
+
 scrollToOpt proc ExpAddr:DWORD
 	;如果有符号则移动至符号处，移动到结尾为止
 
@@ -286,6 +343,47 @@ scrollToOpt proc ExpAddr:DWORD
 	ret
 	;返回值存储在eax中	
 scrollToOpt endp
+
+optcmp proc StkAddr:DWORD,opt:DWORD
+	;注意要传入操作符栈顶的地址,opt为操作符的值
+	push ebx
+	push ecx
+	mov ebx,StkAddr
+	mov ecx,[ebx]
+
+	.IF opt == '*' || opt == '/'
+		.IF  ecx == '*' || ecx == '/'
+			xor eax,eax
+		.ELSE
+			;优先级更高的情况
+			mov eax,1
+		.ENDIF
+	.ELSE
+		.IF  ecx == '*' || ecx == '/'
+			xor eax,eax
+		.ELSE
+			xor eax,eax
+		.ENDIF
+	.ENDIF
+
+	pop ecx
+	pop ebx
+	ret
+	;返回值存储在eax中
+optcmp endp
+
+promptError proc
+	push eax
+	push ebx
+	push ecx
+	push edx
+	invoke MessageBox,NULL,ADDR errorMsg,ADDR errorwinTittle,MB_OK
+	pop edx
+	pop ecx
+	pop ebx
+	pop eax
+	ret
+promptError	endp
 
 WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 	.IF uMsg==WM_DESTROY
@@ -377,8 +475,8 @@ WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 			.ELSEIF  ax==IDM_UPDATETEXT
 				invoke GetWindowText,hwndEdit,ADDR buffer,512
 				invoke CalProc,ADDR buffer
-				;TODO:Change this to actual calculate operations
-				invoke SetWindowText,hwndEdit,ADDR buffer
+				invoke itoa,eax,ADDR result
+				invoke SetWindowText,hwndEdit,ADDR result
 			.ELSE
 				invoke DestroyWindow,hWnd
 			.ENDIF
@@ -491,6 +589,42 @@ WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 	ret
 WndProc endp
 
+calculate proc op1:DWORD,op2:DWORD,opt:DWORD
+	push ebx
+	push ecx 
+	push edx
+	xor eax,eax
+	xor ebx,ebx
+	xor ecx,ecx
+	xor edx,edx
+
+	.IF opt == '+'
+		mov eax,op1
+    	add eax,op2
+	.ELSEIF opt == '-'
+		mov eax,op1
+    	sub eax,op2
+	.ELSEIF opt == '*'
+		mov eax,op1
+		imul op2
+	.ELSEIF opt == '/'
+		mov eax,op1
+		mov ebx,op2
+		.IF ebx == 0
+			invoke promptError
+			mov ebx,1
+		.ENDIF
+		idiv ebx
+	.ELSE
+		invoke promptError
+	.ENDIF
+	pop edx
+	pop ecx
+	pop ebx
+	;返回值存储在eax中
+	ret
+calculate endp
+
 ;计算过程
 CalProc proc ExpAddr:DWORD
 	push ebx;存数字栈顶
@@ -500,10 +634,9 @@ CalProc proc ExpAddr:DWORD
 	mov ecx,offset opts
 	mov edx,ExpAddr 
 
-
 	.WHILE edx != 0
 		invoke atoi,edx
-		;推入数据栈
+		;推入数字栈
 		mov [ebx],eax
 		add ebx,4
 
@@ -513,23 +646,83 @@ CalProc proc ExpAddr:DWORD
 		mov al,[edx]
 		invoke isOperator,eax
 		.IF eax == 1
-		;推入符号栈
-			mov eax,[edx]
-			mov [ecx],eax
-			add ecx,4
-			add edx,1
+			mov al,[edx]
+			;与栈顶符号比较
+			invoke optcmp,ecx,eax
+			.IF eax == 0
+				;一直弹出到同级别或栈空为止
+				.WHILE ecx > offset opts && eax == 0
+					sub ecx,4
+					push ecx
+					push edx
+
+					;弹出一个操作符两个数字进行计算
+					
+					mov eax,[ecx]
+
+					sub ebx,4
+					mov ecx,[ebx]
+					sub ebx,4
+					mov edx,[ebx]
+
+					;由于堆栈的反向原因，操作数顺序交换
+					invoke calculate,edx,ecx,eax
+					;结果数字回栈
+					mov [ebx],eax
+					add ebx,4
+
+					pop edx
+					pop ecx
+					.IF ecx > offset opts
+						invoke optcmp,ecx,eax
+					.ENDIF
+				.ENDW
+			.ENDIF
+				;将当前操作符压栈
+				mov al,[edx]
+				mov [ecx],eax
+				add ecx,4
+				add edx,1
+			
 		.ELSE
+			;到达末尾
+			;结果加载到eax中
+			mov eax,[ebx]
 			xor edx,edx
 		.ENDIF
-
 	.ENDW
 	
+	;处理栈中剩下的数字和符号
+	;出一个符号，两个数字进行计算
+	.WHILE ecx > offset opts
+		sub ecx,4
+		push ecx
+		push edx
+
+		mov eax,[ecx]
+		sub ebx,4
+		mov ecx,[ebx]
+		sub ebx,4
+		mov edx,[ebx]
+		;由于堆栈的反向原因，操作数顺序交换
+		invoke calculate,edx,ecx,eax
+		;结果数字回栈
+		mov [ebx],eax
+		add ebx,4
+		pop edx
+		pop ecx
+	.ENDW
+
+	;最终结果
+	sub ebx,4
+	mov eax,[ebx]
 	pop edx
 	pop ecx
 	pop ebx
 	;返回值存储在eax中
 	ret
 CalProc endp
+
 
 
 end start
