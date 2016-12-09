@@ -1,103 +1,102 @@
 .386
 .model flat,stdcall
 option casemap:none
-WinMain proto :DWORD,:DWORD,:DWORD,:DWORD		;主窗口过程
-AppendText proto StringAddr:DWORD,Text:DWORD	;用于在字符串末尾添加字符
-CalProc proto ExpAddr:DWORD						;计算器的中缀表达式处理过程
-getEndChar proto StringAddr:DWORD 				;获取末尾字符，返回的 值 存在eax中
-setEndChar proto StringAddr:DWORD,Text:DWORD	;设置末尾字符
-isOperator proto chr:DWORD						;是否运算符，传入值
-atoi proto ExpAddr:DWORD						;用于把文字转换为数字
-itoa proto num:DWORD,StringAddr:DWORD			;用于把数字转换为文字
+
+WinMain 	proto :DWORD,:DWORD,:DWORD,:DWORD	;主窗口过程
+MessageBoxA proto :DWORD,:DWORD,:DWORD,:DWORD	;用于构建MessageBox
+MessageBox 	equ <MessageBoxA> 					;用于显示错误消息
+
+AppendText 	proto StringAddr:DWORD,Text:DWORD	;用于在字符串末尾添加字符
+getEndChar 	proto StringAddr:DWORD 				;获取末尾字符，返回的 值 存在eax中
+setEndChar 	proto StringAddr:DWORD,Text:DWORD	;设置末尾字符
 scrollToOpt proto ExpAddr:DWORD					;找到下一个符号
-optcmp proto StkAddr:DWORD,opt:DWORD 			;用于符号间的优先级比较
-calculate proto op1:DWORD,op2:DWORD,opt:DWORD	;实际的运算处理
+isOperator 	proto chr:DWORD						;是否运算符，传入值
+optcmp 		proto StkAddr:DWORD,opt:DWORD 		;用于符号间的优先级比较
+atoi 		proto ExpAddr:DWORD					;用于把文字转换为数字
+itoa 		proto num:DWORD,StringAddr:DWORD	;用于把数字转换为文字
+CalProc 	proto ExpAddr:DWORD					;计算器的中缀表达式处理过程
+calculate 	proto op1:DWORD,op2:DWORD,opt:DWORD	;实际的运算处理
 promptError proto 								;错误提示
-MessageBoxA proto :DWORD,:DWORD,:DWORD,:DWORD
-MessageBox equ <MessageBoxA> 					;用于显示错误消息
 
-include \masm32\include\windows.inc
-include \masm32\include\user32.inc
-include \masm32\include\kernel32.inc
-includelib \masm32\lib\user32.lib
-includelib \masm32\lib\kernel32.lib
+include 	\masm32\include\windows.inc
+include 	\masm32\include\user32.inc
+include 	\masm32\include\kernel32.inc
+includelib 	\masm32\lib\user32.lib
+includelib 	\masm32\lib\kernel32.lib
 
-.data
-temp 	db 0
-ClassName db "SimpleWinClass",0
-AppName  db "计算器",0
-MenuName db "FirstMenu",0
-ButtonClassName db "button",0
-errorwinTittle db "错误提示",0
-errorMsg db "发生错误",0
-ButtonText1 db "1",0
-ButtonText2 db "2",0
-ButtonText3 db "3",0
-ButtonText4 db "4",0
-ButtonText5 db "5",0
-ButtonText6 db "6",0
-ButtonText7 db "7",0
-ButtonText8 db "8",0
-ButtonText9 db "9",0
-ButtonText0 db "0",0
-ButtonTextAdd db "+",0
-ButtonTextSub db "-",0
-ButtonTextMul db "*",0
-ButtonTextDiv db "/",0
-ButtonTextEqu db "=",0
-ButtonTextClr db "AC",0
+.DATA
+temp 			BYTE 0
+ClassName 		BYTE "SimpleWinClass",0
+AppName  		BYTE "计算器",0
+MenuName 		BYTE "FirstMenu",0
+ButtonClassName BYTE "button",0
+errorwinTittle 	BYTE "错误提示",0
+errorMsg 		BYTE "发生错误",0
 
+ButtonText1 	BYTE "1",0
+ButtonText2 	BYTE "2",0
+ButtonText3 	BYTE "3",0
+ButtonText4 	BYTE "4",0
+ButtonText5 	BYTE "5",0
+ButtonText6 	BYTE "6",0
+ButtonText7 	BYTE "7",0
+ButtonText8 	BYTE "8",0
+ButtonText9 	BYTE "9",0
+ButtonText0 	BYTE "0",0
+ButtonTextAdd 	BYTE "+",0
+ButtonTextSub 	BYTE "-",0
+ButtonTextMul 	BYTE "*",0
+ButtonTextDiv 	BYTE "/",0
+ButtonTextEqu 	BYTE "=",0
+ButtonTextClr 	BYTE "AC",0
 
-EditClassName db "edit",0
-TestString db "Wow! I'm in an edit box now",0
+EditClassName 	BYTE "edit",0
+TestString 		BYTE "Wow! I'm in an edit box now",0
 
-.data?
-hInstance HINSTANCE ?
-hInstance1 HINSTANCE ?
-hInstance2 HINSTANCE ?
-hInstance3 HINSTANCE ?
-hInstance4 HINSTANCE ?
-hInstance5 HINSTANCE ?
-hInstance6 HINSTANCE ?
-hInstance7 HINSTANCE ?
-hInstance8 HINSTANCE ?
-hInstance9 HINSTANCE ?
-hInstance0 HINSTANCE ?
-hInstanceAdd HINSTANCE ?
-hInstanceSub HINSTANCE ?
-hInstanceMul HINSTANCE ?
-hInstanceDiv HINSTANCE ?
-hInstanceEqu HINSTANCE ?
-hInstanceClr HINSTANCE ?
+.DATA?
+hInstance 		HINSTANCE ?
+hInstance1 		HINSTANCE ?
+hInstance2 		HINSTANCE ?
+hInstance3 		HINSTANCE ?
+hInstance4 		HINSTANCE ?
+hInstance5 		HINSTANCE ?
+hInstance6 		HINSTANCE ?
+hInstance7 		HINSTANCE ?
+hInstance8 		HINSTANCE ?
+hInstance9 		HINSTANCE ?
+hInstance0 		HINSTANCE ?
+hInstanceAdd 	HINSTANCE ?
+hInstanceSub 	HINSTANCE ?
+hInstanceMul 	HINSTANCE ?
+hInstanceDiv 	HINSTANCE ?
+hInstanceEqu 	HINSTANCE ?
+hInstanceClr 	HINSTANCE ?
 
 CommandLine LPSTR ?
-ButtonOne HWND ?
-ButtonTwo HWND ?
+ButtonOne 	HWND ?
+ButtonTwo 	HWND ?
 ButtonThree HWND ?
-ButtonFour HWND ?
-ButtonFive HWND ?
-ButtonSix HWND ?
+ButtonFour 	HWND ?
+ButtonFive 	HWND ?
+ButtonSix 	HWND ?
 ButtonSeven HWND ?
 ButtonEight HWND ?
-ButtonNine HWND ?
-ButtonZero HWND ?
-ButtonAdd HWND ?
-ButtonSub HWND ?
-ButtonMul HWND ?
-ButtonDiv HWND ?
-ButtonEqu HWND ?
-ButtonClr HWND ?
-hwndEdit HWND ?
-;输入表达式缓冲区
-buffer db 512 dup(?)
-;数字栈
-oprs db 512 dup(?)
-;符号栈
-opts db 512 dup(?)
-;结果存储区域
-result db 128 dup(?)
+ButtonNine 	HWND ?
+ButtonZero 	HWND ?
+ButtonAdd 	HWND ?
+ButtonSub 	HWND ?
+ButtonMul 	HWND ?
+ButtonDiv 	HWND ?
+ButtonEqu 	HWND ?
+ButtonClr 	HWND ?
+hwndEdit 	HWND ?
 
-.const
+buffer 	BYTE 512 dup(?);输入表达式缓冲区
+oprs 	BYTE 512 dup(?);数字栈
+opts 	BYTE 512 dup(?);符号栈
+result 	BYTE 512 dup(?);结果存储区域
+
+.CONST
 
 EditID equ 10
 
@@ -108,19 +107,19 @@ ButtonDivID equ 14
 ButtonEquID equ 15
 ButtonClrID equ 16
 
-IDM_HELLO equ 1
-IDM_CLEAR equ 2
-IDM_GETTEXT equ 3
-IDM_EXIT equ 4
-IDM_UPDATETEXT equ 5
-IDM_APEENDTEXT equ 6
+IDM_HELLO 		equ 1
+IDM_CLEAR 		equ 2
+IDM_GETTEXT 	equ 3
+IDM_EXIT 		equ 4
+IDM_UPDATETEXT 	equ 5
+IDM_APEENDTEXT 	equ 6
 
 .code
 start:
 	invoke GetModuleHandle, NULL
 	mov    hInstance,eax
 	invoke GetCommandLine
-	mov CommandLine,eax
+	mov    CommandLine,eax
 	invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
 	invoke ExitProcess,eax
 
@@ -143,7 +142,7 @@ WinMain proc hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:DWORD
 	mov   wc.hIconSm,eax
 	invoke LoadCursor,NULL,IDC_ARROW
 	mov   wc.hCursor,eax
-	invoke RegisterClassEx, addr wc
+	invoke RegisterClassEx, ADDR wc
 	;创建主窗口
 	INVOKE CreateWindowEx,WS_EX_CLIENTEDGE,ADDR ClassName,ADDR AppName,\
            WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
@@ -712,8 +711,8 @@ CalProc proc ExpAddr:DWORD
 	push ebx;存数字栈顶
 	push ecx;存符号栈顶
 	push edx;存表达式的进度指针
-	mov ebx,offset oprs
-	mov ecx,offset opts
+	mov ebx,OFFSET oprs
+	mov ecx,OFFSET opts
 	mov edx,ExpAddr 
 
 	.WHILE edx != 0
@@ -734,7 +733,7 @@ CalProc proc ExpAddr:DWORD
 			invoke optcmp,ecx,eax
 			.IF eax == 0
 				;一直弹出到同级别或栈空为止
-				.WHILE ecx > offset opts && eax == 0
+				.WHILE ecx > OFFSET opts && eax == 0
 					sub ecx,4
 					push ecx
 					push edx
@@ -756,7 +755,7 @@ CalProc proc ExpAddr:DWORD
 
 					pop edx
 					pop ecx
-					.IF ecx > offset opts
+					.IF ecx > OFFSET opts
 						invoke optcmp,ecx,eax
 					.ENDIF
 				.ENDW
@@ -778,7 +777,7 @@ CalProc proc ExpAddr:DWORD
 	
 	;处理栈中剩下的数字和符号
 	;出一个符号，两个数字进行计算
-	.WHILE ecx > offset opts
+	.WHILE ecx > OFFSET opts
 		sub ecx,4
 		push ecx
 		push edx
@@ -806,7 +805,5 @@ CalProc proc ExpAddr:DWORD
 	;返回值存储在eax中
 	ret
 CalProc endp
-
-
 
 end start
