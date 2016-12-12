@@ -24,7 +24,7 @@ include 	\masm32\include\kernel32.inc
 includelib 	\masm32\lib\user32.lib
 includelib 	\masm32\lib\kernel32.lib
 
-.DATA
+.data
 temp 			BYTE 0
 ClassName 		BYTE "SimpleWinClass",0
 AppName  		BYTE "计算器",0
@@ -53,7 +53,7 @@ ButtonTextClr 	BYTE "AC",0
 EditClassName 	BYTE "edit",0
 TestString 		BYTE "Wow! I'm in an edit box now",0
 
-.DATA?
+.data?
 hInstance 		HINSTANCE ?
 hInstance1 		HINSTANCE ?
 hInstance2 		HINSTANCE ?
@@ -72,7 +72,7 @@ hInstanceDiv 	HINSTANCE ?
 hInstanceEqu 	HINSTANCE ?
 hInstanceClr 	HINSTANCE ?
 
-CommandLine LPSTR ?
+
 ButtonOne 	HWND ?
 ButtonTwo 	HWND ?
 ButtonThree HWND ?
@@ -96,7 +96,7 @@ oprs 	BYTE 512 dup(?);数字栈
 opts 	BYTE 512 dup(?);符号栈
 result 	BYTE 512 dup(?);结果存储区域
 
-.CONST
+.const
 
 EditID equ 10
 
@@ -118,15 +118,13 @@ IDM_APEENDTEXT 	equ 6
 start:
 	invoke GetModuleHandle, NULL
 	mov    hInstance,eax
-	invoke GetCommandLine
-	mov    CommandLine,eax
-	invoke WinMain, hInstance,NULL,CommandLine, SW_SHOWDEFAULT
+	invoke WinMain, hInstance,NULL,NULL, SW_SHOWDEFAULT
 	invoke ExitProcess,eax
 
 WinMain proc hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:DWORD
-	LOCAL wc:WNDCLASSEX
-	LOCAL msg:MSG
-	LOCAL hwnd:HWND
+	local wc:WNDCLASSEX
+	local msg:MSG
+	local hwnd:HWND
 	mov   wc.cbSize,SIZEOF WNDCLASSEX
 	mov   wc.style, CS_HREDRAW or CS_VREDRAW
 	mov   wc.lpfnWndProc, OFFSET WndProc
@@ -144,20 +142,20 @@ WinMain proc hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:DWORD
 	mov   wc.hCursor,eax
 	invoke RegisterClassEx, ADDR wc
 	;创建主窗口
-	INVOKE CreateWindowEx,WS_EX_CLIENTEDGE,ADDR ClassName,ADDR AppName,\
+	invoke CreateWindowEx,WS_EX_CLIENTEDGE,ADDR ClassName,ADDR AppName,\
            WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,\
            CW_USEDEFAULT,215,300,NULL,NULL,\
            hInstance,NULL
 	mov   hwnd,eax
-	INVOKE ShowWindow, hwnd,SW_SHOWNORMAL
-	INVOKE UpdateWindow, hwnd
+	invoke ShowWindow, hwnd,SW_SHOWNORMAL
+	invoke UpdateWindow, hwnd
 
 	;消息处理循环
 	.WHILE TRUE
-                INVOKE GetMessage, ADDR msg,NULL,0,0
+                invoke GetMessage, ADDR msg,NULL,0,0
                 .BREAK .IF (!eax)
-                INVOKE TranslateMessage, ADDR msg
-                INVOKE DispatchMessage, ADDR msg
+                invoke TranslateMessage, ADDR msg
+                invoke DispatchMessage, ADDR msg
 	.ENDW
 	mov     eax,msg.wParam
 	ret
