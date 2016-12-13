@@ -25,10 +25,8 @@ includelib 	\masm32\lib\user32.lib
 includelib 	\masm32\lib\kernel32.lib
 
 .data
-temp 			BYTE 0
 ClassName 		BYTE "SimpleWinClass",0
 AppName  		BYTE "计算器",0
-MenuName 		BYTE "FirstMenu",0
 ButtonClassName BYTE "button",0
 errorwinTittle 	BYTE "错误提示",0
 errorMsg 		BYTE "发生错误",0
@@ -55,23 +53,6 @@ TestString 		BYTE "Wow! I'm in an edit box now",0
 
 .data?
 hInstance 		HINSTANCE ?
-hInstance1 		HINSTANCE ?
-hInstance2 		HINSTANCE ?
-hInstance3 		HINSTANCE ?
-hInstance4 		HINSTANCE ?
-hInstance5 		HINSTANCE ?
-hInstance6 		HINSTANCE ?
-hInstance7 		HINSTANCE ?
-hInstance8 		HINSTANCE ?
-hInstance9 		HINSTANCE ?
-hInstance0 		HINSTANCE ?
-hInstanceAdd 	HINSTANCE ?
-hInstanceSub 	HINSTANCE ?
-hInstanceMul 	HINSTANCE ?
-hInstanceDiv 	HINSTANCE ?
-hInstanceEqu 	HINSTANCE ?
-hInstanceClr 	HINSTANCE ?
-
 
 ButtonOne 	HWND ?
 ButtonTwo 	HWND ?
@@ -107,12 +88,10 @@ ButtonDivID equ 14
 ButtonEquID equ 15
 ButtonClrID equ 16
 
-IDM_HELLO 		equ 1
-IDM_CLEAR 		equ 2
-IDM_GETTEXT 	equ 3
-IDM_EXIT 		equ 4
-IDM_UPDATETEXT 	equ 5
-IDM_APEENDTEXT 	equ 6
+IDM_CLEAR 		equ 1
+IDM_EXIT 		equ 2
+IDM_UPDATETEXT 	equ 3
+IDM_APEENDTEXT 	equ 4
 
 .code
 start:
@@ -133,7 +112,6 @@ WinMain proc hInst:HINSTANCE,hPrevInst:HINSTANCE,CmdLine:LPSTR,CmdShow:DWORD
 	push  hInst
 	pop   wc.hInstance
 	mov   wc.hbrBackground,COLOR_BTNFACE+1
-	mov   wc.lpszMenuName,OFFSET MenuName
 	mov   wc.lpszClassName,OFFSET ClassName
 	invoke LoadIcon,NULL,IDI_APPLICATION
 	mov   wc.hIcon,eax
@@ -478,67 +456,67 @@ WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 		;添加按钮
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText1,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        30,210,30,30,hWnd,1,hInstance1,NULL
+                        30,210,30,30,hWnd,1,hInstance,NULL
 		mov  ButtonOne,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText2,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        75,210,30,30,hWnd,2,hInstance2,NULL
+                        75,210,30,30,hWnd,2,hInstance,NULL
 		mov  ButtonTwo,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText3,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        120,210,30,30,hWnd,3,hInstance3,NULL
+                        120,210,30,30,hWnd,3,hInstance,NULL
 		mov  ButtonThree,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText4,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        30,165,30,30,hWnd,4,hInstance4,NULL
+                        30,165,30,30,hWnd,4,hInstance,NULL
 		mov  ButtonFour,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText5,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        75,165,30,30,hWnd,5,hInstance5,NULL
+                        75,165,30,30,hWnd,5,hInstance,NULL
 		mov  ButtonFive,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText6,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        120,165,30,30,hWnd,6,hInstance6,NULL
+                        120,165,30,30,hWnd,6,hInstance,NULL
 		mov  ButtonSix,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText7,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        30,120,30,30,hWnd,7,hInstance7,NULL
+                        30,120,30,30,hWnd,7,hInstance,NULL
 		mov  ButtonSeven,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText8,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        75,120,30,30,hWnd,8,hInstance8,NULL
+                        75,120,30,30,hWnd,8,hInstance,NULL
 		mov  ButtonEight,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText9,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        120,120,30,30,hWnd,9,hInstance9,NULL
+                        120,120,30,30,hWnd,9,hInstance,NULL
 		mov  ButtonNine,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonText0,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        75,75,30,30,hWnd,0,hInstance0,NULL
+                        75,75,30,30,hWnd,0,hInstance,NULL
 		mov  ButtonZero,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonTextAdd,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        165,165,30,30,hWnd,ButtonAddID,hInstanceAdd,NULL
+                        165,165,30,30,hWnd,ButtonAddID,hInstance,NULL
 		mov  ButtonAdd,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonTextSub,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        165,120,30,30,hWnd,ButtonSubID,hInstanceSub,NULL
+                        165,120,30,30,hWnd,ButtonSubID,hInstance,NULL
 		mov  ButtonSub,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonTextMul,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        165,75,30,30,hWnd,ButtonMulID,hInstanceMul,NULL
+                        165,75,30,30,hWnd,ButtonMulID,hInstance,NULL
 		mov  ButtonMul,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonTextDiv,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        120,75,30,30,hWnd,ButtonDivID,hInstanceDiv,NULL
+                        120,75,30,30,hWnd,ButtonDivID,hInstance,NULL
 		mov  ButtonDiv,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonTextEqu,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        165,210,30,30,hWnd,ButtonEquID,hInstanceEqu,NULL
+                        165,210,30,30,hWnd,ButtonEquID,hInstance,NULL
 		mov  ButtonEqu,eax
 		invoke CreateWindowEx,NULL, ADDR ButtonClassName,ADDR ButtonTextClr,\
                         WS_CHILD or WS_VISIBLE or BS_DEFPUSHBUTTON,\
-                        30,75,30,30,hWnd,ButtonClrID,hInstanceClr,NULL
+                        30,75,30,30,hWnd,ButtonClrID,hInstance,NULL
 		mov  ButtonClr,eax
 
 	.ELSEIF uMsg==WM_COMMAND
@@ -547,9 +525,6 @@ WndProc proc hWnd:HWND, uMsg:UINT, wParam:WPARAM, lParam:LPARAM
 			;指令处理区域
 			.IF ax==IDM_CLEAR
 				invoke SetWindowText,hwndEdit,NULL
-			.ELSEIF  ax==IDM_GETTEXT
-				invoke GetWindowText,hwndEdit,ADDR buffer,512
-				invoke MessageBox,NULL,ADDR buffer,ADDR AppName,MB_OK
 			.ELSEIF  ax==IDM_UPDATETEXT
 				invoke GetWindowText,hwndEdit,ADDR buffer,512
 				invoke CalProc,ADDR buffer
@@ -739,7 +714,7 @@ CalProc proc ExpAddr:DWORD
 					;弹出一个操作符两个数字进行计算
 					
 					mov eax,[ecx]
-
+					
 					sub ebx,4
 					mov ecx,[ebx]
 					sub ebx,4
